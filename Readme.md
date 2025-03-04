@@ -40,9 +40,6 @@ The application relies on the following environment variables, which should be d
 ## Running the Applications
 
 ### SingleAgent
-![SingleAgent](Images/SingleAgent.png)
-*Screenshot of the Single agent showing agent interactions*
-
 The SingleAgent.py script sets up a single agent to perform a specific task.
 
 1. Ensure the .env file is correctly configured.
@@ -86,8 +83,6 @@ sequenceDiagram
 ```
 
 ### MultiAgents Flow
-![MultiAgent](Images/multiAgents.png)
-*Screenshot of the MultiAgent showing agent interactions*
 
 ```mermaid
 flowchart TD
