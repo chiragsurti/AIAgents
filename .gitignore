@@ -347,3 +347,4 @@ ASALocalRun/
 
 web-portal/.env
 Tools/Storage_Data_Cleanup_Module/local.settings.json
+.cache/41/cache.db
