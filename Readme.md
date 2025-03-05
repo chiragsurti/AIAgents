@@ -133,6 +133,8 @@ The MultiAgents.py script sets up a group chat with multiple agents to complete 
     ```sh
     python MultiAgents.py
     ```
+3. ![output](Images/MultiAgents-output-s1.gif)
+
 
 
 ## License
