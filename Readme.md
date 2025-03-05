@@ -133,6 +133,8 @@ The MultiAgents.py script sets up a group chat with multiple agents to complete 
     ```sh
     python MultiAgents.py
     ```
+3. ![output](Images/output-Multi-Agents.gif)
+
 
 
 ## License
@@ -141,4 +143,4 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Contact
 
-For any questions or issues, please contact chirag.surti@neudesic.com
+For any questions or issues
