@@ -1,13 +1,12 @@
 
 ## Overview
 
-This workspace contains two Python scripts, MultiAgents.py and SingleAgent.py, which utilize the `autogen` library to create and manage AI agents for different tasks.
+This workspace contains two Python scripts, MultiAgents.py and SingleAgent.py, which utilize Microsoft's **AutoGen AgentChat** framework (version 0.7.5) to create and manage AI agents for different tasks. The framework has been updated to the latest version with improved async/await patterns and better model client integration.
 
 ## Prerequisites
 
-- Python 3.7 or higher
+- Python 3.10 or higher
 - `pip` package manager
-- `dotenv` library
 
 ## Setup
 
@@ -19,28 +18,26 @@ This workspace contains two Python scripts, MultiAgents.py and SingleAgent.py, w
     ```
 4. Create a .env file in the root directory with the following content:
     ```env
-    OPEN_API_KEY=your_open_api_key
     AZURE_OPENAI_ENDPOINT=your_azure_openai_endpoint
     AZURE_OPENAI_MODEL=your_azure_openai_model
     AZURE_OPENAI_API_VERSION=your_azure_openai_api_version
     AZURE_OPENAI_KEY=your_azure_openai_key
-    OAI_CONFIG_LIST='[{"model": "llama3.2:latest","api_key": ""}]'
     ```
 ## Environment Variables
 
 The application relies on the following environment variables, which should be defined in the .env file:
 
-- `OPEN_API_KEY`: Your OpenAI API key.
-- `AZURE_OPENAI_ENDPOINT`: The endpoint for Azure OpenAI.
-- `AZURE_OPENAI_MODEL`: The model name for Azure OpenAI.
-- `AZURE_OPENAI_API_VERSION`: The API version for Azure OpenAI.
-- `AZURE_OPENAI_KEY`: The API key for Azure OpenAI.
-- `OAI_CONFIG_LIST`: Configuration list for other models.
+- `AZURE_OPENAI_ENDPOINT`: The endpoint for Azure OpenAI (e.g., `https://your-resource.openai.azure.com/`)
+- `AZURE_OPENAI_MODEL`: The Azure OpenAI deployment name (e.g., `gpt-4o`, `gpt-35-turbo`)
+- `AZURE_OPENAI_API_VERSION`: The API version for Azure OpenAI (e.g., `2024-06-01`)
+- `AZURE_OPENAI_KEY`: The API key for Azure OpenAI
+
+**Note**: The MultiAgents script also uses Ollama for the Writer agent. Ensure you have Ollama running locally at `http://localhost:11434` with the `llama3.2:latest` model installed, or modify the configuration to use Azure OpenAI for all agents.
 
 ## Running the Applications
 
 ### SingleAgent
-The SingleAgent.py script sets up a single agent to perform a specific task.
+The SingleAgent.py script sets up a single agent to perform a specific task using async/await pattern.
 
 1. Ensure the .env file is correctly configured.
 2. Run the script:
@@ -54,86 +51,100 @@ The SingleAgent.py script sets up a single agent to perform a specific task.
 sequenceDiagram
     
     participant User as User
-    participant UserProxy as UserProxyAgent
+    participant Main as Async Main
     participant Comedian as AssistantAgent(Comedian)
     participant Azure as Azure OpenAI
-
+    
     Note over User, Azure: Initialization Phase
-    User->>UserProxy: Create UserProxyAgent
-    activate UserProxy
-    User->>Comedian: Create AssistantAgent
+    User->>Main: Run python SingleAgent.py
+    activate Main
+    Main->>Comedian: Create AssistantAgent
     activate Comedian
-    Comedian->>Azure: Configure with Azure OpenAI
+    Comedian->>Azure: Configure AzureOpenAIChatCompletionClient
     activate Azure
     deactivate Azure
     
     Note over User, Azure: Interaction Phase
-    User->>+UserProxy: initiate_chat()
-    UserProxy->>+Comedian: "Tell me a joke about cats and ninjas."
+    Main->>+Comedian: run_stream(task)
     Comedian->>+Azure: Request completion
-    Azure-->>-Comedian: Return response
-    Comedian-->>-UserProxy: Deliver joke
-    UserProxy-->>-User: Display response
-
+    Azure-->>-Comedian: Stream response
+    Comedian-->>Main: Stream messages to Console
+    Main-->>-User: Display response
+    
     Note over User, Azure: Termination Phase
-    User->>UserProxy: Destroy UserProxyAgent
-    deactivate UserProxy
-    User->>Comedian: Destroy AssistantAgent
+    Main->>Comedian: Complete
     deactivate Comedian
+    deactivate Main
 ```
 
 ### MultiAgents Flow
 
 ```mermaid
 flowchart TD
-    User([User]) --> UserProxy[Admin\nConversableAgent]
+    User([User]) --> Main[Async Main]
     
-    subgraph GroupChat
-        UserProxy <--> Planner[Planner\nConversableAgent]
+    subgraph RoundRobinGroupChat
+        Main --> Planner[Planner\nAssistantAgent]
         Planner <--> Engineer[Engineer\nAssistantAgent]
-        Engineer <--> Executor[Executor\nConversableAgent]
-        Executor <--> Writer[Writer\nConversableAgent]
-        Writer <--> UserProxy
+        Engineer <--> Executor[Executor\nCodeExecutorAgent]
+        Executor <--> Writer[Writer\nAssistantAgent]
+        Writer <--> Planner
     end
     
-    Manager[GroupChatManager] --> GroupChat
-    UserProxy --> Manager
+    Main --> Console[Console UI]
     
-    OpenAI[(Azure OpenAI)] <--> UserProxy
-    OpenAI <--> Planner
-    OpenAI <--> Engineer
+    AzureOpenAI[(Azure OpenAI)] <--> Planner
+    AzureOpenAI <--> Engineer
     Ollama[(Ollama LLM)] <--> Writer
     
-    Executor --> Code[Code Execution\nEnvironment]
+    Executor --> Code[LocalCommandLineCodeExecutor\ncoding/]
     
-    style GroupChat fill:#f5f5f5,stroke:#caffa3,stroke-width:3px,color:#333
-    style UserProxy fill:#d5e8d4,stroke:#add8e6,color:#333
-    style Manager fill:#dae8fc,stroke:#6c8ebf,color:#333
-    style OpenAI fill:#ffe6cc,stroke:#d23342,color:#333
+    style RoundRobinGroupChat fill:#f5f5f5,stroke:#caffa3,stroke-width:3px,color:#333
+    style Main fill:#d5e8d4,stroke:#add8e6,color:#333
+    style Console fill:#dae8fc,stroke:#6c8ebf,color:#333
+    style AzureOpenAI fill:#ffe6cc,stroke:#d23342,color:#333
     style Ollama fill:#ffe6cc,stroke:#d23342,color:#333
     style Code fill:#33a3dd,stroke:#b85450,color:#333
 ```
 
 
-The diagram shows how the five agents in MultiAgents.py work together in a group chat:
-- The Admin agent interfaces with the user and provides feedback to the Writer
+The diagram shows how the four agents in MultiAgents.py work together in a round-robin group chat:
 - The Planner determines information needed and steps to complete the task
 - The Engineer writes code based on the Planner's guidance
-- The Executor runs the code in a dedicated environment
+- The Executor runs the code in a dedicated environment using LocalCommandLineCodeExecutor
 - The Writer creates the blog post using results from the executed code
 
-All these interactions are orchestrated by the GroupChatManager using a structured conversation flow.
+All interactions are orchestrated by the RoundRobinGroupChat team with a maximum of 10 messages.
 
 ### MultiAgents
 
-The MultiAgents.py script sets up a group chat with multiple agents to complete a task collaboratively.
+The MultiAgents.py script sets up a round-robin group chat with multiple agents to complete a task collaboratively using async/await pattern.
 
 1. Ensure the .env file is correctly configured.
-2. Run the script:
+2. (Optional) Ensure Ollama is running locally with llama3.2:latest model, or modify the Writer agent to use Azure OpenAI.
+3. Run the script:
     ```sh
     python MultiAgents.py
     ```
-3. ![output](Images/output-Multi-Agents.gif)
+
+## Key Changes in the Migration
+
+This project has been migrated to use the latest Microsoft AutoGen framework (autogen-agentchat 0.7.5):
+
+### What's New:
+- **Updated Package**: Migrated from deprecated `autogen` to `autogen-agentchat` and `autogen-ext`
+- **Async/Await Pattern**: All agent interactions now use modern async/await syntax
+- **Improved Model Clients**: Using dedicated model client classes (`AzureOpenAIChatCompletionClient`, `OpenAIChatCompletionClient`)
+- **Better Code Execution**: Using `CodeExecutorAgent` with `LocalCommandLineCodeExecutor` for safer and more structured code execution
+- **RoundRobinGroupChat**: Simplified multi-agent orchestration with built-in team patterns
+- **Console UI**: Built-in console streaming for better user experience
+
+### Breaking Changes from Old AutoGen:
+- Import paths changed: `from autogen import` → `from autogen_agentchat.agents import` and `from autogen_ext.models.openai import`
+- Synchronous APIs replaced with async/await
+- `UserProxyAgent` pattern replaced with direct task execution
+- `GroupChat`/`GroupChatManager` replaced with team patterns like `RoundRobinGroupChat`
+- Model configuration changed from dict to client objects
 
 
 
