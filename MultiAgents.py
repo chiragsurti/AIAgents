@@ -21,9 +21,11 @@ model_client_ollama = OpenAIChatCompletionClient(
 )
 
 # Configuration for Azure OpenAI
+# Note: azure_deployment is your deployment name in Azure Portal
+# model specifies the OpenAI model capabilities to expect
 model_client_azure = AzureOpenAIChatCompletionClient(
-    azure_deployment=os.environ.get("AZURE_OPENAI_MODEL"),
-    model=os.environ.get("AZURE_OPENAI_MODEL"),
+    azure_deployment=os.environ.get("AZURE_OPENAI_MODEL"),  # Your Azure deployment name
+    model=os.environ.get("AZURE_OPENAI_MODEL"),  # The model type (e.g., gpt-4o)
     api_version=os.environ.get("AZURE_OPENAI_API_VERSION"),
     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
     api_key=os.environ.get("AZURE_OPENAI_KEY")
